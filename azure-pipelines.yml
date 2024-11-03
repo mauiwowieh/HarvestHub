@@ -10,7 +10,6 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  buildConfiguration: 'Release'
   nodeVersion: '20.16.0'        # Adjust Node.js version as needed
   dotnetVersion: '8.0.10'       # Adjust .NET version as needed
 
@@ -35,17 +34,17 @@ stages:
 
     - script: |
         cd backend
-        dotnet build --configuration $(buildConfiguration)
+        dotnet build
       displayName: 'Build Backend'
 
     - script: |
         cd backend
-        dotnet test --no-build --configuration $(buildConfiguration)
+        dotnet test --no-build
       displayName: 'Test Backend'
 
     - task: PublishBuildArtifacts@1
       inputs:
-        PathtoPublish: 'backend/bin/$(buildConfiguration)/net8.0.10'  # Adjust the .NET target framework version
+        PathtoPublish: 'backend/bin/Debug/net8.0'  # Adjust the .NET target framework version
         ArtifactName: 'BackendArtifact'
       displayName: 'Publish Backend Artifacts'
 
@@ -69,7 +68,7 @@ stages:
 
     - script: |
         cd frontend
-        npm run build -- --prod
+        ng serve
       displayName: 'Build Frontend'
 
     - task: PublishBuildArtifacts@1
