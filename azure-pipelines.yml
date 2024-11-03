@@ -4,19 +4,76 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/javascript
 
 trigger:
-- master
+- master  # or your default branch
 
 pool:
-  vmImage: ubuntu-latest
+  vmImage: 'ubuntu-latest'
 
-steps:
-- task: NodeTool@0
-  inputs:
-    versionSpec: '20.x'
-  displayName: 'Install Node.js'
+variables:
+  buildConfiguration: 'Release'
+  nodeVersion: '20.16.0'        # Adjust Node.js version as needed
+  dotnetVersion: '8.0.10'       # Adjust .NET version as needed
 
-- script: |
-    npm install -g @angular/cli
-    npm install
-    ng build --prod
-  displayName: 'npm install and build'
+stages:
+# Stage 1: Build .NET Backend
+- stage: Build_Backend
+  displayName: 'Build .NET Backend'
+  jobs:
+  - job: BuildBackendJob
+    displayName: 'Build Backend Job'
+    steps:
+    - task: UseDotNet@2
+      inputs:
+        packageType: 'sdk'
+        version: $(dotnetVersion)
+      displayName: 'Install .NET SDK'
+
+    - script: |
+        cd backend
+        dotnet restore
+      displayName: 'Restore NuGet Packages'
+
+    - script: |
+        cd backend
+        dotnet build --configuration $(buildConfiguration)
+      displayName: 'Build Backend'
+
+    - script: |
+        cd backend
+        dotnet test --no-build --configuration $(buildConfiguration)
+      displayName: 'Test Backend'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: 'backend/bin/$(buildConfiguration)/net8.0.10'  # Adjust the .NET target framework version
+        ArtifactName: 'BackendArtifact'
+      displayName: 'Publish Backend Artifacts'
+
+# Stage 2: Build Angular Frontend
+- stage: Build_Frontend
+  displayName: 'Build Angular Frontend'
+  dependsOn: Build_Backend
+  jobs:
+  - job: BuildFrontendJob
+    displayName: 'Build Frontend Job'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: $(nodeVersion)
+      displayName: 'Install Node.js'
+
+    - script: |
+        cd frontend
+        npm install
+      displayName: 'Install Frontend Dependencies'
+
+    - script: |
+        cd frontend
+        npm run build -- --prod
+      displayName: 'Build Frontend'
+
+    - task: PublishBuildArtifacts@1
+      inputs:
+        PathtoPublish: 'frontend/dist'
+        ArtifactName: 'FrontendArtifact'
+      displayName: 'Publish Frontend Artifacts'
